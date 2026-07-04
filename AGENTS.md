@@ -17,3 +17,14 @@ When making changes to the API, here are the general steps you should take:
   - The full test suite takes a long time to run, so you should try to only execute the relevant tests locally, and let CI run the full test suite.
 4. Push to a branch, open a PR, and let CI run to verify your win condition.
 Keep these steps in mind while building your TODO list.
+
+## Cursor Cloud specific instructions
+
+The dev environment (Docker, Redis, `libpq-dev`, the FoundationDB client lib, and Rust stable) is preinstalled in the VM snapshot. The startup script only refreshes Node deps (`pnpm install` in `apps/api`, which also rebuilds the `@mendable/firecrawl-rs` native module). The Go html→markdown shared lib and the TypeScript build are produced automatically by the harness at startup, so they are not part of the startup script.
+
+Non-obvious caveats for running services here:
+- `dockerd` and `redis-server` are NOT auto-started (no systemd in the container). Before running the harness, start both once per VM boot: `sudo dockerd` (e.g. in a tmux session) and `redis-server --port 6379`. The harness itself provisions the Postgres (`firecrawl-nuq-postgres`) and RabbitMQ (`firecrawl-nuq-rabbitmq`) containers via Docker, but it does NOT start Redis.
+- Docker is configured for docker-in-docker with the `fuse-overlayfs` storage driver and `containerd-snapshotter` disabled (see `/etc/docker/daemon.json`); this combo is required on this kernel for Docker 29.
+- Run the API for local dev with `pnpm dev` from `apps/api` (dev harness with auto-restart). `apps/api/.env` sets `REDIS_URL`, `USE_DB_AUTHENTICATION=false`, and intentionally leaves `NUQ_DATABASE_URL`/`NUQ_RABBITMQ_URL` unset so the harness manages those containers on `localhost:5432` / `localhost:5672`. The API listens on `http://localhost:3002`.
+- Rust must be >= 1.85 (edition2024) for the native module; the snapshot's default toolchain is stable (1.96+). The README's `curl GET /test` route is outdated — use `/is-production` for a health check and `POST /v2/scrape` for a real request.
+- This is a self-hosted setup (no fire-engine/cloud): run tests with `TEST_SUITE_SELF_HOSTED=true` so cloud-only snips are skipped. Some `snips` still assume fire-engine and will 400; that is an environment limitation, not a regression. Services must already be up (via `pnpm dev`) when running `pnpm exec vitest run <file>`.
