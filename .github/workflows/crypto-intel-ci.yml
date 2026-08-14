@@ -1,0 +1,34 @@
+name: crypto-intel CI
+
+on:
+  pull_request:
+    paths:
+      - crypto-intel/**
+      - .github/workflows/crypto-intel-ci.yml
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Typecheck & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./crypto-intel
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          version: 10
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ./crypto-intel/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
