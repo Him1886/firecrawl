@@ -84,7 +84,27 @@ allowlist. See <https://code.claude.com/docs/en/claude-code-on-the-web>.
 | `src/config.ts` | Env loading + validation |
 | `src/scheduler.ts` | Resilient interval loop for `--loop` |
 | `src/index.ts` | Entry point (`runOnce` + CLI) |
+| `src/paper-types.ts` | Paper-trading domain types (all simulated) |
+| `src/paper-broker.ts` | Deterministic paper-trade simulator (fake money, no exchange) |
+| `src/paper-notion-sink.ts` | Maps trades + equity snapshots to the paper Notion DBs |
 | `test/` | Unit tests, fully mocked |
+
+## Paper trading (simulated)
+
+A deterministic, fully **simulated** trading engine — fake money, **no exchange,
+no real orders, no exchange API keys, ever**. `paper-broker.ts` maintains a
+virtual account (cash + positions), fills orders against the price feed with a
+fees/slippage model, and marks positions to market — auto-closing on stop or
+target. Results persist to two machine-owned Notion databases:
+
+- **Paper Trades** — one row per simulated trade (entry/stop/target, R/R, status, P&L)
+- **Paper Portfolio** — equity time-series (the track record / equity curve)
+
+Built and tested in isolation (Steps 1–2). The rules-based decision layer
+(Step 3) and the live run loop that ties market data → broker → Notion (Step 4)
+come next, and the loop needs the market feed flowing (see the network note).
+Going from paper → live is a separate, deliberate, explicitly-approved step —
+not something this code does on its own.
 
 ## Roadmap
 
